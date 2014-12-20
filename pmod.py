@@ -10,6 +10,7 @@ __version__ = '0.1'
 
 import enum
 import time
+import pdb
 import serial
 
 
@@ -66,7 +67,7 @@ class PMOD:
         self.instrReady = False
 
         # Connect to UART.
-        self.ser = serial.Serial(self.accessPortLaptop, self.baudRate)
+        self.ser = serial.Serial(self.accessPortPi, self.baudRate)
 
     def write(self, msg, row, col):
         """ Writes a message to the PMOD at the given row and column. Breaks up
@@ -104,7 +105,7 @@ class PMOD:
             raise ErrorInstrHeader('instruction header has already been sent')
         self.writeChar(self.ESC)
         self.writeChar(self.BRACKET)
-        self.instrRead = True
+        self.instrReady = True
 
     def reset(self):
         """ Reset PMOD. Equivalent to cycling the power.
@@ -200,7 +201,9 @@ class PMOD:
         """ Clears the display and home the cursor.
         """
         self.writeInstrHeader()
-        self.writeChar(self.DISP_CLEAR)
+        if self.instrReady:
+            self.writeChar(self.DISP_CLEAR)
+        self.instrReady = False
 
     def dispModeSet(self, mode):
         """ Sets the display mode.
@@ -355,7 +358,7 @@ def main():
         pmod = PMOD(accessType, baudRate)
         pmod.cursorModeSet(2)
         pmod.dispClear()
-        pmod.write('Hello', 2, 0)
+        pmod.write('Hello', 1, 0)
     except ErrorWrite as e:
         print(e.msg)
     except ErrorPMOD as e:

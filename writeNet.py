@@ -11,10 +11,12 @@ __version__ = '0.1'
 import pmod
 import socket
 import time
+import pdb
 import sys
 
 
 def main():
+    pdb.set_trace()
     try:
         baudRate = 9600
         accessType = pmod.AccessType.UART
@@ -22,12 +24,15 @@ def main():
         while True:
             time.sleep(5)
             p.dispClear()
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(('8.8.8.8', 0))
-            host = socket.gethostname()
-            addr = s.getsockname()[0]
-            p.write(host, 0, 0)
-            p.write(addr, 1, 0)
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(('8.8.8.8', 0))
+                host = socket.gethostname()
+                addr = s.getsockname()[0]
+                p.write(host, 0, 0)
+                p.write(addr, 1, 0)
+            except socket.error:
+                pass
     except pmod.ErrorWrite as e:
         print(e.msg)
     except pmod.ErrorPMOD as e:
