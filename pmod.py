@@ -63,10 +63,10 @@ class PMOD:
         # correct instruction header. Once the header is sent, the following
         # flag is set. If a message is written to the PMOD while the flag is
         # set, an error will occur.
-        # self.instrReady = False
+        self.instrReady = False
 
         # Connect to UART.
-        self.ser = serial.Serial(self.accessPortPi, self.baudRate)
+        self.ser = serial.Serial(self.accessPortLaptop, self.baudRate)
 
     def write(self, msg, row, col):
         """ Writes a message to the PMOD at the given row and column. Breaks up
@@ -75,9 +75,9 @@ class PMOD:
         """
         if self.accessType is AccessType.UART:
             # Make sure the message can fit on the display.
-            if row > self.rows - 1:
+            if row not in range(0, self.rows):
                 raise ErrorRangeRow(row)
-            if len(msg) > self.cols - 1:
+            if len(msg) not in range(0, self.cols):
                 raise ErrorRangeCol(len(msg))
 
             # Set the position.
@@ -90,7 +90,7 @@ class PMOD:
     def writeChar(self, char):
         """ Writes a character to the PMOD.
         """
-        time.sleep(0.01)
+        time.sleep(0.01)  # Not sure why this is needed.
         if self.accessType is AccessType.UART:
             if len(char) > 1:
                 raise ErrorWrite()
@@ -100,49 +100,64 @@ class PMOD:
         """ PMOD expects to get the character sequence escape followed by a bracket
         before the instruction can be sent.
         """
+        if self.instrReady:
+            raise ErrorInstrHeader('instruction header has already been sent')
         self.writeChar(self.ESC)
         self.writeChar(self.BRACKET)
+        self.instrRead = True
 
     def reset(self):
         """ Reset PMOD. Equivalent to cycling the power.
         """
         self.writeInstrHeader()
-        self.writeChar(self.RESET)
+        if self.instrReady:
+            self.writeChar(self.RESET)
+        self.instrReady = False
 
     def cursorPosSet(self, row, col):
         """ Sets the cursor position to the given row column.
         """
         self.writeInstrHeader()
-        self.writeChar(str(row))
-        self.writeChar(';')
-        self.writeChar(str(col))
-        self.writeChar(self.CURSOR_POS_SET)
+        if self.instrReady:
+            self.writeChar(str(row))
+            self.writeChar(';')
+            self.writeChar(str(col))
+            self.writeChar(self.CURSOR_POS_SET)
+        self.instrReady = False
 
     def cursorPosSave(self):
         """ Saves the current cursor position.
         """
         self.writeInstrHeader()
-        self.writeChar(self.CURSOR_POS_SAVE)
+        if self.instrReady:
+            self.writeChar(self.CURSOR_POS_SAVE)
+        self.instrReady = False
 
     def cursorPosRestore(self):
         """ Restores the saved cursor position.
         """
         self.writeInstrHeader()
-        self.writeChar(self.CURSOR_POS_RESTORE)
+        if self.instrReady:
+            self.writeChar(self.CURSOR_POS_RESTORE)
+        self.instrReady = False
 
     def cursorModeSet(self, mode):
         """ Sets the cursor mode.
         """
         self.writeInstrHeader()
-        self.writeChar(str(mode))
-        self.writeChar(self.CURSOR_MODE_SET)
+        if self.instrReady:
+            self.writeChar(str(mode))
+            self.writeChar(self.CURSOR_MODE_SET)
+        self.instrReady = False
 
     def cursorModeSave(self, mode):
         """ Saves the cursor mode to EEPROM.
         """
         self.writeInstrHeader()
-        self.writeChar(chr(mode))
-        self.writeChar(self.CURSOR_MODE_SAVE)
+        if self.instrReady:
+            self.writeChar(chr(mode))
+            self.writeChar(self.CURSOR_MODE_SAVE)
+        self.instrReady = False
 
     def eraseInline(self, mode):
         """ Erases within line based on the mode.
@@ -151,15 +166,25 @@ class PMOD:
             If mode is 1, erases from the start of the line to the current
             position. If mode is 2, erases the entire line.
         """
+        if mode not in range(0, 2):
+            raise ErrorRangeModeErase(mode)
         self.writeInstrHeader()
-        self.writeChar(chr(mode))
-        self.writeChar(self.CURSOR_MODE_SAVE)
+        if self.instrReady:
+            self.writeChar(chr(mode))
+            self.writeChar(self.ERASE_INLINE)
+        self.instrReady = False
 
-    def eraseField(self, chars):
-        """ Erases field in the current line where chars is the number of chars
-            to erase starting at the current position.
+    def eraseField(self, numChars):
+        """ Erases field in the current line specified by the number of chars
+            at the current position.
         """
-        pass
+        if numChars not in range(0, self.cols - numChars - 1):
+            raise 
+        self.writeInstrHeader()
+        if self.instrReady:
+            self.writeChar(str(numChars))
+            self.writeChar(self.ERASE_FIELD)
+        self.instrReady = False
 
     def scrollLeft(self, cols):
         """ Scrolls left by the selected number of columns.
@@ -240,6 +265,15 @@ class ErrorWrite(ErrorPMOD):
     """
     def __init__(self, msg=''):
         self.msg = 'error: failed writing to the display'
+        if msg != '':
+            self.msg = '%s: %s' % (self.msg, msg)
+
+
+class ErrorInstrHeader(ErrorPMOD):
+    """ Instruction header invalid.
+    """
+    def __init__(self, msg=''):
+        self.msg = 'error: instruction header is invalid' % msg
         if msg != '':
             self.msg = '%s: %s' % (self.msg, msg)
 
