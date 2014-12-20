@@ -15,6 +15,7 @@ import sys
 
 
 def main():
+    time.sleep(60)
     try:
         baudRate = 9600
         accessType = pmod.AccessType.UART
