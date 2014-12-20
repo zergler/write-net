@@ -10,7 +10,6 @@ __version__ = '0.1'
 
 import enum
 import time
-import pdb
 import serial
 
 
